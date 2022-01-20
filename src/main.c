@@ -3,23 +3,23 @@
 */
 
 /* Includes */
-#include <stddef.h>
-#include "stm32l1xx.h"
+#include "include.h"
 #include "nucleo152start.h"
-#include <stdio.h>
-#include <stdlib.h>
-
+#include "table.h"
 /* Private typedef */
 /* Private define  */
 /* Private macro */
 /* Private variables */
 /* Private function prototypes */
 /* Private functions */
-void USART2_Init(void);
-void USART2_write(char data);
-void delay_Ms(int delay);
-void init_pwm1(void);
 
+void delay_Ms(int delay);
+void init_PWM_TIM2(void);
+void init_PWM_TIM3(void);
+void init_PWM_TIM4(void);
+void init_PWM_TIM9(void);
+void debug_APB1_TIM2_freeze(void);
+void debug_APB1_TIM2_unfreeze(void);
 /**
 **===========================================================================
 **
@@ -32,83 +32,198 @@ int main(void) {
 	SetSysClock();
 	SystemCoreClockUpdate();
 	USART2_Init();
-	/* TODO - Add your application code here */
-	char buf[100];
-	init_pwm1();
-
-
+	init_PWM_TIM2();
+	init_PWM_TIM3();
+	init_PWM_TIM4();
+	
+	// debug_APB1_TIM2_unfreeze();
+	debug_APB1_TIM2_freeze();
+	
+	/* Infinite loop */
 	/* Infinite loop */
 	while (1) {
-		TIM2->CCR2 += 100;
-		delay_Ms(500);
+		// TIM2->CCR1 += 10;
+		// TIM3->CCR1 += 10;
+		// TIM4->CCR1 += 10;
+		// if (TIM2->CCR1 > 2000) {
+		// 	TIM2->CCR1 = 10;
+		// 	TIM4->CCR1 = 10;
+
+			
+		// }
+		// if (TIM3->CCR1 > 2000) {
+		// 	TIM3->CCR1 = 10;
+		// }
 	}
 	return 0;
 }
-
-void USART2_Init(void) {
-	RCC->APB1ENR|=0x00020000; 	//set bit 17 (USART2 EN)
-	RCC->AHBENR|=0x00000001; 	//enable GPIOA port clock bit 0 (GPIOA EN)
-	GPIOA->AFR[0]=0x00000700;	//GPIOx_AFRL p.188,AF7 p.177
-	GPIOA->AFR[0]|=0x00007000;	//GPIOx_AFRL p.188,AF7 p.177
-	GPIOA->MODER|=0x00000020; 	//MODER2=PA2(TX) to mode 10=alternate function mode. p184
-	GPIOA->MODER|=0x00000080; 	//MODER2=PA3(RX) to mode 10=alternate function mode. p184
-
-	USART2->BRR = 0x00000D05;	//9600 BAUD and crystal 32MHz. p710, D05
-	USART2->CR1 = 0x00000008;	//TE bit. p739-740. Enable transmit
-	USART2->CR1 |= 0x00000004;	//RE bit. p739-740. Enable receiver
-	USART2->CR1 |= 0x00002000;	//UE bit. p739-740. Uart enable
+void debug_APB1_TIM2_unfreeze(void) {
+	DBGMCU->APB1FZ &= ~1;
+}
+void debug_APB1_TIM2_freeze(void) {
+	// Debug MCU APB1 freeze register
+	DBGMCU->APB1FZ |= 1;
 }
 
-// 17.3.9 PWM mode
-// p.404
+//dont work
+void init_PWM_TIM9(void) {
+	// AHB peripheral clock enable register
+	RCC->AHBENR |= 1;				// Enable GPIOA clock
+	// GPIO alternate function low register (GPIOx_AFRL) 
+	// AF03
+	GPIOA->AFR[0] |= ((1 << 29) | (1 << 28));  	// PA7 pin for TIM9
+	// GPIO port mode register (GPIOx_MODER) (x = A..H)
+	GPIOA->MODER &= ~((1<< 14) | (1 << 15));		// Clear bits
+	GPIOA->MODER |= (1 << 15);		// Set bits
 
-// Pulse width modulation mode allows generating 
-// a signal with a frequency determined by the 
-// value of the TIMx_ARR register and a duty cycle 
-// determined by the value of the 
-// TIMx_CCRx register
 
-//https://deepbluembedded.com/stm32-pwm-example-timer-pwm-mode-tutorial/
-// TIMx_ARR auto reload register p435
-// TIMx_PSC prescaler
-//https://github.com/fcayci/stm32f1-bare-metal
-void init_pwm1(void) {
-	RCC->AHBENR |= 1; 			//GPIOA ABH bus clock ON. p154
-	GPIOA->MODER &= ~0x0000000C;	//clear (input reset state for PA1). p184
-	GPIOA->MODER |= 0x00000008; 	//GPIOA pin 1 (PA1) to alternate function. p184
-	GPIOA->AFR[0] &= ~0x000000F0;	//clear AFRL1 bits. p188
-
-	//TIM2_CH2 connected to PA1, STM32L152RET6 datasheet p47.
-	GPIOA->AFR[0] |= 0x00000010; 	//AF1 (TIM2) GPIOA pin 1 (PA1). p177, p188
-
-	//Timers table can be found form STM32L152RET6 datasheet p28.
-	//Functional overwiev STM32L152RET6 datasheet p13
-
-	//Timer block diagram p384
-	RCC->APB1ENR|=1; 			//TIM2EN: Timer 2 clock enable. p160
-	TIM2->PSC=32-1; 			//TIMx prescaler: 32 000 000 MHz / 32 000 = 1 000 Hz. p435
-	TIM2->ARR=1000-1; 			//TIMx auto-reload register. 1 000 Hz / 10000 = 0,1 Hz ~ 10s. p435
-
-	//CCMR1=TIMx capture/compare mode register 1, Bits 14:12 OC2M[2:0]: Output compare 2 mode
-	TIM2->CCMR1=0x3000;			//011: Toggle - OC2REF toggles when TIMx_CNT=TIMx_CCR2. p430
-	TIM2->CCR2=0;				//TIM2 capture/compare register 2. p435
-
-	//OC2 signal is output on the corresponding output pin. p434
-	TIM2->CCER|=0x10;			//Bit 4 CC2E: Capture/Compare 1 output enable. p434
-	TIM2->CNT=0;				//counter start value = 0
-	TIM2->CR1=1; 				//TIMx control register 1, TIM2 Counter enabled. p421
-
-	// TIM2->ARR = 0;
-	// TIM2->PSC = 0;
-}
-void USART2_write(char data) {
-	//wait while TX buffer is empty
-	while(!(USART2->SR & 0x0080)){} 	//6. p736-737
-		USART2->DR = (data);		//p739
+	//Setup TIM9
+	// APB1 peripheral clock enable register
+	RCC->APB2ENR |= (2 << 1); 		// Enable TIM9 clock
+	// TIMx prescaler (TIMx_PSC)
+	TIM9->PSC = 32000 - 1;			// divided by 16000
+	// TIMx auto-reload register
+	TIM9->ARR = 2000 - 1; 			// divided by 26667
+	// TIMx counter (TIMx_CNT)
+	TIM9->CNT = 0;
+	// TIMx capture/compare mode register 1 	
+	TIM9->CCMR1 = 0x0060; 			// PWM mode
+	// TIMx capture/compare enable register (TIMx_CCER)
+	TIM9->CCER = 1;					// Enable PWM Ch1
+	// TIMx capture/compare register 1 
+	TIM9->CCR1 = 10 - 1; 			// Pulse width 1/3 of the period
+	// TIMx control register 1
+	TIM9->CR1 = 1;					// Enable Timer	
 }
 
-void delay_Ms(int delay) {
+
+void init_PWM_TIM4(void) {
+	// AHB peripheral clock enable register
+	RCC->AHBENR |= (1 << 1);				// Enable GPIOB clock
+	// GPIO alternate function low register (GPIOx_AFRL) 
+	GPIOB->AFR[0] |= (1 << 25);   			// PB6 pin for tim4
+	// GPIO port mode register (GPIOx_MODER) (x = A..H)
+	GPIOB->MODER &= ~((1<< 13) | (1 << 12));// Clear bits
+	GPIOB->MODER |= (1 << 13);				// Set bits
+
+	//Setup TIM4
+	// APB1 peripheral clock enable register
+	RCC->APB1ENR |= (2 << 1); 		// Enable TIM4 clock
+	// TIMx prescaler (TIMx_PSC)
+	TIM4->PSC = 8000 - 1;			// divided by 16000
+	// TIMx auto-reload register
+	TIM4->ARR = 2000 - 1; 			// divided by 26667
+	// TIMx counter (TIMx_CNT)
+	TIM4->CNT = 0;
+	// TIMx capture/compare mode register 1 	
+	TIM4->CCMR1 = 0x0060; 			// PWM mode
+	// TIMx capture/compare enable register (TIMx_CCER)
+	TIM4->CCER = 1;					// Enable PWM Ch1
+	// TIMx capture/compare register 1 
+	TIM4->CCR1 = 10 - 1; 			// Pulse width 1/3 of the period
+	// TIMx control register 1
+	TIM4->CR1 = 1;					// Enable Timer	
+}
+// not working atm
+// void init_PWM_TIM4(void) {
+// 	// AHB peripheral clock enable register
+// 	RCC->AHBENR |= 1;				// Enable GPIOA clock
+// 	// GPIO alternate function low register (GPIOx_AFRL) 
+// 	GPIOA->AFR[1] |= (1 << 5);  	// PA7 pin for tim4
+// 	// GPIO port mode register (GPIOx_MODER) (x = A..H)
+// 	GPIOA->MODER &= ~((1<< 14) | (1 << 15));		// Clear bits
+// 	GPIOA->MODER |= (1 << 19);		// Set bits
+
+// 	//Setup TIM4
+// 	// APB1 peripheral clock enable register
+// 	RCC->APB1ENR |= (2 << 1); 		// Enable TIM4 clock
+// 	// TIMx prescaler (TIMx_PSC)
+// 	TIM4->PSC = 32000 - 1;			// divided by 16000
+// 	// TIMx auto-reload register
+// 	TIM4->ARR = 2000 - 1; 			// divided by 26667
+// 	// TIMx counter (TIMx_CNT)
+// 	TIM4->CNT = 0;
+// 	// TIMx capture/compare mode register 1 	
+// 	TIM4->CCMR1 = 0x0060; 			// PWM mode
+// 	// TIMx capture/compare enable register (TIMx_CCER)
+// 	TIM4->CCER = 1;					// Enable PWM Ch1
+// 	// TIMx capture/compare register 1 
+// 	TIM4->CCR1 = 10 - 1; 			// Pulse width 1/3 of the period
+// 	// TIMx control register 1
+// 	TIM4->CR1 = 1;					// Enable Timer	
+// }
+
+void init_PWM_TIM3(void) {
+	// AHB peripheral clock enable register
+	RCC->AHBENR |= 1;				// Enable GPIOA clock
+	// GPIO alternate function low register (GPIOx_AFRL) 
+	GPIOA->AFR[0] |= (1 << 25); 	// PA6 pin for tim3
+
+
+	// GPIO port mode register (GPIOx_MODER) (x = A..H)
+	GPIOA->MODER &= ~((1<< 13) | (1 << 12));		// Clear bits
+	GPIOA->MODER |= (1 << 13);		// Set bits
+
+	//Setup TIM3
+	// APB1 peripheral clock enable register
+	RCC->APB1ENR |= (1 << 1); 		// Enable TIM3 clock
+	// TIMx prescaler (TIMx_PSC)
+	TIM3->PSC = 32000 - 1;			// divided by 16000
+	// TIMx auto-reload register
+	TIM3->ARR = 2000 - 1; 			// divided by 26667
+	// TIMx counter (TIMx_CNT)
+	TIM3->CNT = 0;
+	// TIMx capture/compare mode register 1 	
+	TIM3->CCMR1 = 0x0060; 			// PWM mode
+	// TIMx capture/compare enable register (TIMx_CCER)
+	TIM3->CCER = 1;					// Enable PWM Ch1
+	// TIMx capture/compare register 1 
+	TIM3->CCR1 = 10 - 1; 			// Pulse width 1/3 of the period
+	// TIMx control register 1
+	TIM3->CR1 = 1;					// Enable Timer	
+}
+//Clock 32 000 000
+//PSC 	16 000
+//Arr 	200
+//32 000 000 / 16 000 = 2000
+// 2000 / 200 = 20Hz
+//CCr1 100/200 = 50%
+//CCr1 150/200 = 75%
+
+// 32 000 000 / 2 = 16 000 000
+// 16 000 000 / 1000 = 16000 
+void init_PWM_TIM2(void) {
+	// AHB peripheral clock enable register
+	RCC->AHBENR |= 1;				// Enable GPIOA clock
+	// GPIO alternate function low register (GPIOx_AFRL) 
+	// GPIOA->AFR[0] |= 0x00100000; 	// PA5 pin for tim2
+	GPIOA->AFR[0] |= (1 << 20);
+	// GPIO port mode register (GPIOx_MODER) (x = A..H)
+	GPIOA->MODER &= ~0x0000C00;		// Clear bits
+	GPIOA->MODER |= (1 << 11);		// Set bits
+
+	//Setup TIM2
+	// APB1 peripheral clock enable register
+	RCC->APB1ENR |= 1; 				// Enable TIM2 clock
+	// TIMx prescaler (TIMx_PSC)
+	TIM2->PSC = 1 - 1;				// divided by 16000
+	// TIMx auto-reload register
+	TIM2->ARR = 2000 - 1; 			// divided by 26667
+	// TIMx counter (TIMx_CNT)
+	TIM2->CNT = 0;
+	// TIMx capture/compare mode register 1 	
+	TIM2->CCMR1 = 0x0060; 			// PWM mode
+	// TIMx capture/compare enable register (TIMx_CCER)
+	TIM2->CCER = 1;					// Enable PWM Ch1
+	// TIMx capture/compare register 1 
+	TIM2->CCR1 = 500 - 1; 			// Pulse width 1/3 of the period
+	// TIMx control register 1
+	TIM2->CR1 = 1;					// Enable Timer
+}
+
+void delay_Ms(int delay)
+{
 	int i=0;
-	for(;delay>0;delay--)
+	for(; delay>0;delay--)
 		for(i=0;i<2460;i++); //measured with oscilloscope
 }

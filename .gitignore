@@ -7,3 +7,15 @@ STM32L152
 STM32L152_reference_manual.pdf
 generating-pwm-signals-using-stm8-nucleo64-boards-stmicroelectronics.pdf
 um1724-stm32-nucleo64-boards-mb1136-stmicroelectronics.pdf
+/Debug/
+/Drivers/
+/.vscode/
+.cproject
+stm32_flash.ld
+VFD_3phase.elf.launch
+/src/startup_stm32l152xe.s
+.gitignore
+.project
+com.atollic.*
+language.*
+org.eclipse.*
