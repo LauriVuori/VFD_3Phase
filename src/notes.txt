@@ -1,0 +1,6 @@
+TIM2 pwm ja timer/interrupt:
+    -Interrupt tapahtuu aina nousevalla reunalla-> pitäisi tapahtua laskevalla reunalla (toimii)
+    -> TIM2->DIER |= (1 << 1);		            //enable UIE, interrupt enable -> falling edge
+
+Arr arvo pitäisi olla max 65535, mutta jottai taajuus voisi olla 16kHz -> kellotaajuus pitäisi olla +1 mHz
+

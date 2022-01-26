@@ -1,4 +1,13 @@
-uint16 table[] = {
+/**
+ * @file table.h
+ * @brief Values for duty cycle
+ * @version 0.1
+ * @date 2022-01-26
+ * 
+ * 
+ */
+
+uint16_t table[160] = {
 1287,
 2573,
 3858,
@@ -159,4 +168,4 @@ uint16 table[] = {
 2573,
 1287,
 0
-}
+};
