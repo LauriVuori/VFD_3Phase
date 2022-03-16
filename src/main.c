@@ -1,6 +1,20 @@
 /*This code tests NUCLEO-L152RE board transmitter UART communication by using
 9600 BAUD and float print with sprintf
 */
+
+/**
+ * 22_02_2022
+ * Sync between timers
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ */
+
 /**
  * Pin config
  * PA5 PWM TIM2
@@ -37,7 +51,9 @@
 #define TIM2_ARR_REGISTER 2000		// 32 mHz / 2000 = 16 000 Hz
 #define TIM3_ARR_REGISTER 2000		// 32 mHz / 2000 = 16 000 Hz
 #define TIM4_ARR_REGISTER 2000		// 32 mHz / 2000 = 16 000 Hz
-
+#define TIM2_DUTY_CYCLE 1500
+#define TIM3_DUTY_CYCLE 1500
+#define TIM4_DUTY_CYCLE 1500
 
 /* Private macro */
 /* Private variables */
@@ -83,12 +99,14 @@ int main(void) {
 	init_PWM_TIM2();
 	init_PWM_TIM3();
 	init_PWM_TIM4();
-	init_GPIO_PA8();
+	// init_GPIO_PA8();
 	
 	// debug_APB1_TIM2_unfreeze();
 	debug_APB1_TIM2_freeze();
 
-	
+	TIM2->CR1 = 1;	
+	TIM3->CR1 = 1;	
+	TIM4->CR1 = 1;	
 	while (1) {
 		// TIM2->CCR1 += 10;
 		// TIM3->CCR1 += 10;
@@ -203,9 +221,9 @@ void init_PWM_TIM4(void) {
 	// APB1 peripheral clock enable register
 	RCC->APB1ENR |= (2 << 1); 		// Enable TIM4 clock
 	// TIMx prescaler (TIMx_PSC)
-	TIM4->PSC = 8000 - 1;			// divided by 16000
+	TIM4->PSC = TIM4_PRESCALER_VAL - 1;			// divided by 16000
 	// TIMx auto-reload register
-	TIM4->ARR = 2000 - 1; 			// divided by 26667
+	TIM4->ARR = TIM4_ARR_REGISTER - 1; 			// divided by 26667
 	// TIMx counter (TIMx_CNT)
 	TIM4->CNT = 0;
 	// TIMx capture/compare mode register 1
@@ -213,9 +231,9 @@ void init_PWM_TIM4(void) {
 	// TIMx capture/compare enable register (TIMx_CCER)
 	TIM4->CCER = 1;					// Enable PWM Ch1
 	// TIMx capture/compare register 1
-	TIM4->CCR1 = 10 - 1; 			// Pulse width 1/3 of the period
+	TIM4->CCR1 = TIM2_DUTY_CYCLE - 1; 			// Pulse width 1/3 of the period
 	// TIMx control register 1
-	TIM4->CR1 = 1;					// Enable Timer
+	// TIM4->CR1 = 1;					// Enable Timer
 }
 
 void init_PWM_TIM3(void) {
@@ -233,9 +251,9 @@ void init_PWM_TIM3(void) {
 	// APB1 peripheral clock enable register
 	RCC->APB1ENR |= (1 << 1); 		// Enable TIM3 clock
 	// TIMx prescaler (TIMx_PSC)
-	TIM3->PSC = 32000 - 1;			// divided by 16000
+	TIM3->PSC = TIM3_PRESCALER_VAL - 1;			// divided by 16000
 	// TIMx auto-reload register
-	TIM3->ARR = 2000 - 1; 			// divided by 26667
+	TIM3->ARR = TIM3_ARR_REGISTER - 1; 			// divided by 26667
 	// TIMx counter (TIMx_CNT)
 	TIM3->CNT = 0;
 	// TIMx capture/compare mode register 1
@@ -243,9 +261,9 @@ void init_PWM_TIM3(void) {
 	// TIMx capture/compare enable register (TIMx_CCER)
 	TIM3->CCER = 1;					// Enable PWM Ch1
 	// TIMx capture/compare register 1
-	TIM3->CCR1 = 10 - 1; 			// Pulse width 1/3 of the period
+	TIM3->CCR1 = TIM2_DUTY_CYCLE - 1; 			// Pulse width 1/3 of the period
 	// TIMx control register 1
-	TIM3->CR1 = 1;					// Enable Timer
+	// TIM3->CR1 = 1;					// Enable Timer
 }
 //Clock 32 000 000
 //PSC 	16 000
@@ -273,7 +291,7 @@ void init_PWM_TIM2(void) {
 	// TIMx prescaler (TIMx_PSC)
 	TIM2->PSC = TIM2_PRESCALER_VAL - 1;				// divided by 16000
 	// TIMx auto-reload register
-	TIM2->ARR = 65535 - 1; 			// divided by 26667
+	TIM2->ARR = TIM2_ARR_REGISTER - 1; 			// divided by 26667
 	// TIMx counter (TIMx_CNT)
 	TIM2->CNT = 0;
 	// TIMx capture/compare mode register 1
@@ -281,14 +299,19 @@ void init_PWM_TIM2(void) {
 	// TIMx capture/compare enable register (TIMx_CCER)
 	TIM2->CCER = 1;					// Enable PWM Ch1
 	// TIMx capture/compare register 1
-	TIM2->CCR1 = 500 - 1; 			// Pulse width 1/3 of the period
+	TIM2->CCR1 = TIM2_DUTY_CYCLE - 1; 			// Pulse width 1/3 of the period
 	// TIMx control register 1
-	TIM2->CR1 = 1;					// Enable Timer
+	// TIM2->CR1 = 1;					// Enable Timer
+	// TIM2->CC1P = 0;
+	// a &= ~((1 << 1));
+	TIM2->CCER &= ~(1 << 1);
+	TIM2->CCER &= ~(7 << 1);
+	// TIM2->CC1PP = 0;
 
 	
-	TIM2->DIER |= (1 << 1);		            //enable UIE, interrupt enable -> falling edge
-	// TIM2->DIER |= 1;		            //enable UIE, interrupt enable -> interrupt from ccr1 val
-    NVIC_EnableIRQ(TIM2_IRQn);
+	// TIM2->DIER |= (1 << 1);		            //enable UIE, interrupt enable -> falling edge
+	// // TIM2->DIER |= 1;		            //enable UIE, interrupt enable -> interrupt from ccr1 val
+    // NVIC_EnableIRQ(TIM2_IRQn);
 }
 
 void delay_Ms(int delay)
