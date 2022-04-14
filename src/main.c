@@ -69,10 +69,11 @@
 
 
 void delay_Ms(int delay);
+
 void init_PWM_TIM2(void);
 void init_PWM_TIM3(void);
 void init_PWM_TIM4(void);
-void init_PWM_TIM9(void);
+
 void init_GPIO_PA8(void);
 void set_GPIO_PA8(uint8_t set_bit);
 void debug_APB1_TIM2_freeze(void);
@@ -103,23 +104,25 @@ int main(void) {
 	
 	// debug_APB1_TIM2_unfreeze();
 	debug_APB1_TIM2_freeze();
+	debug_APB1_TIM3_freeze();
 
 	TIM2->CR1 = 1;	
 	TIM3->CR1 = 1;	
 	TIM4->CR1 = 1;	
 	while (1) {
-		// TIM2->CCR1 += 10;
-		// TIM3->CCR1 += 10;
+		TIM2->CCR1 += 10;
+		TIM3->CCR1 += 10;
 		// TIM4->CCR1 += 10;
-		// if (TIM2->CCR1 > 2000) {
-		// 	TIM2->CCR1 = 10;
-		// 	TIM4->CCR1 = 10;
+		if (TIM2->CCR1 > 2000) {
+			TIM2->CCR1 = 10;
+			// TIM4->CCR1 = 10;
 
-
-		// }
-		// if (TIM3->CCR1 > 2000) {
-		// 	TIM3->CCR1 = 10;
-		// }
+		}
+		if (TIM3->CCR1 > 2000) {
+			TIM3->CCR1 = 10;
+			USART2_write('d');
+		}
+		delay_Ms(100);
 	}
 	return 0;
 }
@@ -171,36 +174,43 @@ void debug_APB1_TIM2_freeze(void) {
 	DBGMCU->APB1FZ |= 1;
 }
 
-//dont work
-void init_PWM_TIM9(void) {
-	// AHB peripheral clock enable register
-	RCC->AHBENR |= 1;				// Enable GPIOA clock
-	// GPIO alternate function low register (GPIOx_AFRL)
-	// AF03
-	GPIOA->AFR[0] |= ((1 << 29) | (1 << 28));  	// PA7 pin for TIM9
-	// GPIO port mode register (GPIOx_MODER) (x = A..H)
-	GPIOA->MODER &= ~((1<< 14) | (1 << 15));		// Clear bits
-	GPIOA->MODER |= (1 << 15);		// Set bits
-
-
-	//Setup TIM9
-	// APB1 peripheral clock enable register
-	RCC->APB2ENR |= (2 << 1); 		// Enable TIM9 clock
-	// TIMx prescaler (TIMx_PSC)
-	TIM9->PSC = 32000 - 1;			// divided by 16000
-	// TIMx auto-reload register
-	TIM9->ARR = 2000 - 1; 			// divided by 26667
-	// TIMx counter (TIMx_CNT)
-	TIM9->CNT = 0;
-	// TIMx capture/compare mode register 1
-	TIM9->CCMR1 = 0x0060; 			// PWM mode
-	// TIMx capture/compare enable register (TIMx_CCER)
-	TIM9->CCER = 1;					// Enable PWM Ch1
-	// TIMx capture/compare register 1
-	TIM9->CCR1 = 10 - 1; 			// Pulse width 1/3 of the period
-	// TIMx control register 1
-	TIM9->CR1 = 1;					// Enable Timer
+/**
+ * @brief Unfreeze TIM3 while debugging, timer will run while pause
+ * 
+ * 
+ */
+void debug_APB1_TIM3_unfreeze(void) {
+	DBGMCU->APB1FZ &= ~(1 << 1);
 }
+/**
+ * @brief TIM3 will freeze durign debugging pause
+ * 
+ * 
+ */
+void debug_APB1_TIM3_freeze(void) {
+	// Debug MCU APB1 freeze register
+	DBGMCU->APB1FZ |= (1 << 1);
+}
+
+/**
+ * @brief Unfreeze TIM4 while debugging, timer will run while pause
+ * 
+ * 
+ */
+void debug_APB1_TIM4_unfreeze(void) {
+	DBGMCU->APB1FZ &= ~(2 << 1);
+}
+/**
+ * @brief TIM4 will freeze durign debugging pause
+ * 
+ * 
+ */
+void debug_APB1_TIM4_freeze(void) {
+	// Debug MCU APB1 freeze register
+	DBGMCU->APB1FZ |= (2 << 1);
+}
+
+
 
 /**
  * @brief 
@@ -276,6 +286,7 @@ void init_PWM_TIM3(void) {
 // 32 000 000 / 2 = 16 000 000
 // 16 000 000 / 1000 = 16000
 void init_PWM_TIM2(void) {
+	/* Basic PWM setup */
 	// AHB peripheral clock enable register
 	RCC->AHBENR |= 1;				// Enable GPIOA clock
 	// GPIO alternate function low register (GPIOx_AFRL)
@@ -300,18 +311,18 @@ void init_PWM_TIM2(void) {
 	TIM2->CCER = 1;					// Enable PWM Ch1
 	// TIMx capture/compare register 1
 	TIM2->CCR1 = TIM2_DUTY_CYCLE - 1; 			// Pulse width 1/3 of the period
-	// TIMx control register 1
-	// TIM2->CR1 = 1;					// Enable Timer
-	// TIM2->CC1P = 0;
-	// a &= ~((1 << 1));
-	TIM2->CCER &= ~(1 << 1);
-	TIM2->CCER &= ~(7 << 1);
-	// TIM2->CC1PP = 0;
+	/*************************/
 
-	
-	// TIM2->DIER |= (1 << 1);		            //enable UIE, interrupt enable -> falling edge
+	/* Polarity */
+	// Bit 1 CC1P: Capture/Compare 1 output Polarity
+	TIM2->CCER |= (1 << 1);
+	/**************/
+
+	/* Interrupts */
+	// TIM2->DIER |= (1 << 1);		        //enable UIE, interrupt enable -> falling edge
 	// // TIM2->DIER |= 1;		            //enable UIE, interrupt enable -> interrupt from ccr1 val
     // NVIC_EnableIRQ(TIM2_IRQn);
+	/**************/
 }
 
 void delay_Ms(int delay)
