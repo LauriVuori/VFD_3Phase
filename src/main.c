@@ -3,10 +3,10 @@
 */
 
 /**
- * 22_02_2022
+ * 14_4_2022
  * Sync between timers
- * 
- * 
+ * Make real timer, new channel
+ * setup interrupts all timers
  * 
  * 
  * 
@@ -54,18 +54,13 @@
 #define TIM2_DUTY_CYCLE 1500
 #define TIM3_DUTY_CYCLE 1500
 #define TIM4_DUTY_CYCLE 1500
-
+#define LAST_PWM_VAL 159
 /* Private macro */
 /* Private variables */
 /* Private function prototypes */
 /* Private functions */
 
-
-// struct duty_cycles {
-// 	uint16_t *tim2_pulse_width;
-// 	uint16_t *tim3_pulse_width;
-// 	uint16_t *tim4_pulse_width;
-// };
+#define DEBUG_TIM2 1
 
 
 void delay_Ms(int delay);
@@ -76,8 +71,15 @@ void init_PWM_TIM4(void);
 
 void init_GPIO_PA8(void);
 void set_GPIO_PA8(uint8_t set_bit);
+
+/* Debug*/
 void debug_APB1_TIM2_freeze(void);
+void debug_APB1_TIM3_freeze(void);
+void debug_APB1_TIM4_freeze(void);
 void debug_APB1_TIM2_unfreeze(void);
+void debug_APB1_TIM3_unfreeze(void);
+void debug_APB1_TIM4_unfreeze(void);
+/* Debug end*/
 
 uint8_t tim2_counter = 0;
 uint8_t tim3_counter = 0;
@@ -91,7 +93,7 @@ uint8_t tim4_counter = 0;
 */
 
 // struct duty_cycles duty_cycles_values;
-
+uint8_t ctr = 0;
 int main(void) {
 	/* Configure the system clock to 32 MHz and update SystemCoreClock */
 	SetSysClock();
@@ -110,21 +112,37 @@ int main(void) {
 	TIM3->CR1 = 1;	
 	TIM4->CR1 = 1;	
 	while (1) {
-		TIM2->CCR1 += 10;
-		TIM3->CCR1 += 10;
-		// TIM4->CCR1 += 10;
-		if (TIM2->CCR1 > 2000) {
-			TIM2->CCR1 = 10;
-			// TIM4->CCR1 = 10;
+		// TIM2->CCR1 += 10;
+		// TIM3->CCR1 += 10;
+		// // TIM4->CCR1 += 10;
+		// if (TIM2->CCR1 > 2000) {
+		// 	TIM2->CCR1 = 10;
+		// 	// TIM4->CCR1 = 10;
 
-		}
-		if (TIM3->CCR1 > 2000) {
-			TIM3->CCR1 = 10;
-			USART2_write('d');
-		}
-		delay_Ms(100);
+		// }
+		// if (TIM3->CCR1 > 2000) {
+		// 	TIM3->CCR1 = 10;
+		// 	USART2_write('d');
+		// }
+		// TIM2->CCR1 = table[ctr];
+		// if (ctr == 159) {
+		// 	ctr = 0;
+		// }
+		// ctr++;
+		// delay_Ms(300);
 	}
 	return 0;
+}
+
+void test_table(void) {
+	char buffer[15];
+	uint16_to_char_array(table[159], buffer);
+	USART2_write_string(buffer);
+	USART2_write_string("\n\r");
+	uint16_to_char_array(table[0], buffer);
+	USART2_write_string(buffer);
+	USART2_write_string("\n\r");
+
 }
 
 void set_GPIO_PA8(uint8_t set_bit) {
@@ -151,10 +169,27 @@ void init_GPIO_PA8(void) {
  * 
  * 
  */
+
 void TIM2_IRQHandler(void) {
 	TIM2->SR=0;			                //clear UIF
 	GPIOA->ODR ^= (1 << 8);
-	//TIM2->CCER = table[tim2_counter];
+
+	TIM2->CCR1 = table[ctr];
+	if (ctr == LAST_PWM_VAL) {
+		ctr = 0;
+		// change polarity
+		TIM2->CCER ^= (1 << 1);
+	}
+	ctr++;
+
+	// char buffer[15];
+	// uint16_to_char_array(table[ctr], buffer);
+	// USART2_write_string(buffer);
+	// USART2_write_string("\n\r");
+	// if (ctr == 159) {
+	// 	ctr = 0;
+	// }
+	// ctr++;
 }
 /**
  * @brief Unfreeze TIM2 while debugging, timer will run while pause
@@ -315,13 +350,13 @@ void init_PWM_TIM2(void) {
 
 	/* Polarity */
 	// Bit 1 CC1P: Capture/Compare 1 output Polarity
-	TIM2->CCER |= (1 << 1);
+	// TIM2->CCER |= (1 << 1);
 	/**************/
 
 	/* Interrupts */
-	// TIM2->DIER |= (1 << 1);		        //enable UIE, interrupt enable -> falling edge
+	TIM2->DIER |= (1 << 1);		        //enable UIE, interrupt enable -> falling edge
 	// // TIM2->DIER |= 1;		            //enable UIE, interrupt enable -> interrupt from ccr1 val
-    // NVIC_EnableIRQ(TIM2_IRQn);
+    NVIC_EnableIRQ(TIM2_IRQn);
 	/**************/
 }
 
