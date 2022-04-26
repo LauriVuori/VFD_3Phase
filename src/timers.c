@@ -1,6 +1,53 @@
 #include "timers.h"
 
 /**
+ * @brief Init Timer 5 
+ * 
+ * 
+ */
+// 1s = 1000ms, 1ms = 1000us
+/**
+ * 32 000 000 = 32 000 000 hz
+ * 
+ * 
+ */
+init_TIM9_upcounting(void) {
+    // AHB peripheral clock enable register
+	RCC->AHBENR |= (1 << 1);				// Enable GPIOC clock
+	// GPIO alternate function low register (GPIOx_AFRL)
+	GPIOC->AFR[1] |= (1 << 21) | (1 << 20);   			// PC13 pin for tim9
+
+    RCC->APB2ENR |= (2 << 1); 		            // Enable TIM9 clock
+
+    TIM9->PSC = 1 - 1;			// divided by 16000
+	// TIMx auto-reload register
+	TIM9->ARR = 32 - 1; 			                // divided by 26667
+	// TIMx counter (TIMx_CNT)
+	TIM9->CNT = 0;
+	// TIMx capture/compare mode register 1
+
+	// TIM9->CCMR1 = 0x0060; 			// PWM mode
+
+	// TIMx capture/compare enable register (TIMx_CCER)
+	// TIM9->CCER = 1;					// Enable PWM Ch1
+	// TIMx capture/compare register 1
+	TIM9->CCR1 = TIM2_DUTY_CYCLE - 1; 			// Pulse width 1/3 of the period
+	
+    TIM9->DIER |= (1 << 1);		        //enable UIE, interrupt enable -> falling edge
+	// // TIM2->DIER |= 1;		            //enable UIE, interrupt enable -> interrupt from ccr1 val
+    NVIC_EnableIRQ(TIM9_IRQn);
+
+}
+
+// void wait52ms (uint8_t wait) {
+// 	uint8_t difference = 0;
+// 	uint8_t starttime = time;
+// 	while (difference <= wait){
+// 		difference = time-starttime;
+// 	}
+// }
+
+/**
  * @brief Init Timer 4 PWM, 16kHz, PB6
  * 
  * 
@@ -19,9 +66,9 @@ void init_PWM_TIM4(void) {
 	// APB1 peripheral clock enable register
 	RCC->APB1ENR |= (2 << 1); 		// Enable TIM4 clock
 	// TIMx prescaler (TIMx_PSC)
-	TIM4->PSC = TIM4_PRESCALER_VAL - 1;			// divided by 16000
+	TIM4->PSC = TIM4_PRESCALER_VAL - 1;			// 32000000
 	// TIMx auto-reload register
-	TIM4->ARR = TIM4_ARR_REGISTER - 1; 			// divided by 26667
+	TIM4->ARR = TIM4_ARR_REGISTER - 1; 			// 16000
 	// TIMx counter (TIMx_CNT)
 	TIM4->CNT = 0;
 	// TIMx capture/compare mode register 1
@@ -62,9 +109,9 @@ void init_PWM_TIM3(void) {
 	// APB1 peripheral clock enable register
 	RCC->APB1ENR |= (1 << 1); 		// Enable TIM3 clock
 	// TIMx prescaler (TIMx_PSC)
-	TIM3->PSC = TIM3_PRESCALER_VAL - 1;			// divided by 16000
+	TIM3->PSC = TIM3_PRESCALER_VAL - 1;			// divided by 1 = 32000000
 	// TIMx auto-reload register
-	TIM3->ARR = TIM3_ARR_REGISTER - 1; 			// divided by 26667
+	TIM3->ARR = TIM3_ARR_REGISTER - 1; 			// divided by 2000 = 16k
 	// TIMx counter (TIMx_CNT)
 	TIM3->CNT = 0;
 	// TIMx capture/compare mode register 1
@@ -114,9 +161,9 @@ void init_PWM_TIM2(void) {
 	// APB1 peripheral clock enable register
 	RCC->APB1ENR |= 1; 				// Enable TIM2 clock
 	// TIMx prescaler (TIMx_PSC)
-	TIM2->PSC = TIM2_PRESCALER_VAL - 1;				// divided by 16000
+	TIM2->PSC = TIM2_PRESCALER_VAL - 1;				// divided by 1 = 32000000
 	// TIMx auto-reload register
-	TIM2->ARR = TIM2_ARR_REGISTER - 1; 			// divided by 26667
+	TIM2->ARR = TIM2_ARR_REGISTER - 1; 			// divided by 2000 = 16000
 	// TIMx counter (TIMx_CNT)
 	TIM2->CNT = 0;
 	// TIMx capture/compare mode register 1

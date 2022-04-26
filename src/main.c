@@ -57,6 +57,7 @@
 
 
 void delay_Ms(int delay);
+void delay_us(uint16_t wait);
 
 
 
@@ -73,7 +74,7 @@ uint8_t tim4_counter = 0;
 **===========================================================================
 */
 
-
+uint16_t time = 0;
 int main(void) {
 	/* Configure the system clock to 32 MHz and update SystemCoreClock */
 	SetSysClock();
@@ -82,16 +83,19 @@ int main(void) {
 	init_PWM_TIM2();
 	init_PWM_TIM3();
 	init_PWM_TIM4();
-	// init_GPIO_PA8();
+	init_TIM9_upcounting();
+	init_GPIO_PA8();
 	
 	// debug_APB1_TIM2_unfreeze();
 	debug_APB1_TIM2_freeze();
 	debug_APB1_TIM3_freeze();
+	debug_APB1_TIM4_freeze();
 
 	// Start timers
 	TIM2->CR1 = 1;	
 	TIM3->CR1 = 1;	
 	TIM4->CR1 = 1;	
+	TIM9->CR1 = 1;	
 	while (1) {
 		// TIM2->CCR1 += 10;
 		// TIM3->CCR1 += 10;
@@ -111,21 +115,44 @@ int main(void) {
 		// }
 		// ctr++;
 		// delay_Ms(300);
+		GPIOA->ODR ^= (1 << 8);
+		delay_us(1);
 	}
 	return 0;
+}
+void wait52ms (uint8_t wait) {
+	uint8_t difference = 0;
+	uint8_t starttime = time;
+	while (difference <= wait){
+		difference = time-starttime;
+	}
+}
+
+void delay_us(uint16_t wait) {
+	uint16_t difference = 0;
+	uint16_t starttime = time;
+	while (difference <= wait) {
+		difference = time - starttime;
+	}
 }
 
 void test_table(void) {
 	char buffer[15];
-	uint16_to_char_array(table[159], buffer);
+	uint16_to_char_array(phase1_table[159], buffer);
 	USART2_write_string(buffer);
 	USART2_write_string("\n\r");
-	uint16_to_char_array(table[0], buffer);
+	uint16_to_char_array(phase1_table[0], buffer);
 	USART2_write_string(buffer);
 	USART2_write_string("\n\r");
 
 }
 
+void TIM9_IRQHandler(void) {
+	TIM9->SR=0;			                //clear UIF
+	// GPIOA->ODR ^= (1 << 8);
+	time++;
+	// set new duty value
+}
 
 /**
  * @brief TIM2 interrupt
@@ -137,7 +164,7 @@ void TIM2_IRQHandler(void) {
 	TIM2->SR=0;			                //clear UIF
 	// GPIOA->ODR ^= (1 << 8);
 	// set new duty value
-	TIM2->CCR1 = table[tim2_counter];
+	TIM2->CCR1 = phase1_table[tim2_counter];
 	if (tim2_counter == LAST_PWM_VAL) {
 		tim2_counter = 0;
 		// change polarity
@@ -150,10 +177,12 @@ void TIM3_IRQHandler(void) {
 	TIM3->SR=0;			                //clear UIF
 	// GPIOA->ODR ^= (1 << 8);
 	// set new duty value
-	TIM3->CCR1 = table[tim3_counter];
+	TIM3->CCR1 = phase2_table[tim3_counter];
 	if (tim3_counter == LAST_PWM_VAL) {
 		tim3_counter = 0;
 		// change polarity
+	}
+	if (tim3_counter == 108) {
 		TIM3->CCER ^= (1 << 1);
 	}
 	tim3_counter++;
@@ -163,7 +192,7 @@ void TIM4_IRQHandler(void) {
 	TIM4->SR=0;			                //clear UIF
 	// GPIOA->ODR ^= (1 << 8);
 	// set new duty value
-	TIM4->CCR1 = table[tim4_counter];
+	TIM4->CCR1 = phase1_table[tim4_counter];
 	if (tim4_counter == LAST_PWM_VAL) {
 		tim4_counter = 0;
 		// change polarity
