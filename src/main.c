@@ -1,12 +1,8 @@
-/*This code tests NUCLEO-L152RE board transmitter UART communication by using
-9600 BAUD and float print with sprintf
-*/
-
 /**
- * 14_4_2022
- * Sync between timers
- * Make real timer, new channel
- * setup interrupts all timers
+ * 26_04_2022
+ * Third phase
+ * Make real timer, new channel, timer 9 works but needs adjusting
+ * 
  * 
  * 
  * 
@@ -20,7 +16,7 @@
  * PA5 PWM TIM2
  * PA6 PWM TIM3
  * PB6 PWM TIM4
- * 
+ * PA8 GPIO
  * 
  */
 
