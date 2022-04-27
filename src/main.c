@@ -40,7 +40,8 @@
 #include "usart.h"
 #include "gpio.h"
 #include "debug.h"
-
+#include "math.h"
+#define PI 3.14159265358979323846
 /* Private typedef */
 /* Private define  */
 
@@ -50,12 +51,11 @@
 /* Private functions */
 
 #define DEBUG_TIM2 1
+uint16_t test[160];
 
+void delay_ms(uint16_t wait);
 
-void delay_Ms(int delay);
-void delay_us(uint16_t wait);
-
-
+void calculate_phase1(void);
 
 /* Debug end*/
 
@@ -86,6 +86,7 @@ int main(void) {
 	debug_APB1_TIM2_freeze();
 	debug_APB1_TIM3_freeze();
 	debug_APB1_TIM4_freeze();
+	debug_APB2_TIM9_freeze();
 
 	// Start timers
 	TIM2->CR1 = 1;	
@@ -111,37 +112,29 @@ int main(void) {
 		// }
 		// ctr++;
 		// delay_Ms(300);
-		GPIOA->ODR ^= (1 << 8);
-		delay_us(1);
+		// GPIOA->ODR ^= (1 << 8);
+		// calculate_phase1();
 	}
 	return 0;
 }
-void wait52ms (uint8_t wait) {
-	uint8_t difference = 0;
-	uint8_t starttime = time;
-	while (difference <= wait){
-		difference = time-starttime;
-	}
-}
+void calculate_phase1(void) {
 
-void delay_us(uint16_t wait) {
+    for (int i = 0; i < 160; i++) {
+        test[i] = ((1000*sin(2*PI*i/320))+1000);
+        // printf("%f %d\n", ((bits*sin(2*PI*i/320))+1000), t);
+    }
+
+}
+void delay_ms(uint16_t wait) {
+	wait *= 10;
 	uint16_t difference = 0;
-	uint16_t starttime = time;
+	uint16_t starttime = TIM9->CNT;
 	while (difference <= wait) {
-		difference = time - starttime;
+		difference = TIM9->CNT - starttime;
 	}
 }
 
-void test_table(void) {
-	char buffer[15];
-	uint16_to_char_array(phase1_table[159], buffer);
-	USART2_write_string(buffer);
-	USART2_write_string("\n\r");
-	uint16_to_char_array(phase1_table[0], buffer);
-	USART2_write_string(buffer);
-	USART2_write_string("\n\r");
 
-}
 
 void TIM9_IRQHandler(void) {
 	TIM9->SR=0;			                //clear UIF
@@ -188,19 +181,12 @@ void TIM4_IRQHandler(void) {
 	TIM4->SR=0;			                //clear UIF
 	// GPIOA->ODR ^= (1 << 8);
 	// set new duty value
-	TIM4->CCR1 = phase1_table[tim4_counter];
+	TIM4->CCR1 = phase3_table[tim4_counter];
 	if (tim4_counter == LAST_PWM_VAL) {
 		tim4_counter = 0;
-		// change polarity
+	}
+	if (tim4_counter == 55) {
 		TIM4->CCER ^= (1 << 1);
 	}
 	tim4_counter++;
-}
-
-
-void delay_Ms(int delay)
-{
-	int i=0;
-	for(; delay>0;delay--)
-		for(i=0;i<2460;i++); //measured with oscilloscope
 }

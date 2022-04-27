@@ -17,3 +17,4 @@
 void init_PWM_TIM2(void);
 void init_PWM_TIM3(void);
 void init_PWM_TIM4(void);
+void init_TIM9_upcounting(void);

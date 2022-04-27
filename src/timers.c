@@ -11,17 +11,17 @@
  * 
  * 
  */
-init_TIM9_upcounting(void) {
+void init_TIM9_upcounting(void) {
     // AHB peripheral clock enable register
-	RCC->AHBENR |= (1 << 1);				// Enable GPIOC clock
+	RCC->AHBENR |= (1 << 1);						// Enable GPIOC clock
 	// GPIO alternate function low register (GPIOx_AFRL)
-	GPIOC->AFR[1] |= (1 << 21) | (1 << 20);   			// PC13 pin for tim9
+	GPIOC->AFR[1] |= (1 << 21) | (1 << 20);   		// PC13 pin for tim9
 
-    RCC->APB2ENR |= (2 << 1); 		            // Enable TIM9 clock
+    RCC->APB2ENR |= (2 << 1); 		            	// Enable TIM9 clock
 
-    TIM9->PSC = 1 - 1;			// divided by 16000
+    TIM9->PSC = 3200 - 1;							// divided by 16000
 	// TIMx auto-reload register
-	TIM9->ARR = 32 - 1; 			                // divided by 26667
+	TIM9->ARR = 65500 - 1; 			                // divided by 26667
 	// TIMx counter (TIMx_CNT)
 	TIM9->CNT = 0;
 	// TIMx capture/compare mode register 1
@@ -31,11 +31,11 @@ init_TIM9_upcounting(void) {
 	// TIMx capture/compare enable register (TIMx_CCER)
 	// TIM9->CCER = 1;					// Enable PWM Ch1
 	// TIMx capture/compare register 1
-	TIM9->CCR1 = TIM2_DUTY_CYCLE - 1; 			// Pulse width 1/3 of the period
+	// TIM9->CCR1 = TIM2_DUTY_CYCLE - 1; 			// Pulse width 1/3 of the period
 	
-    TIM9->DIER |= (1 << 1);		        //enable UIE, interrupt enable -> falling edge
-	// // TIM2->DIER |= 1;		            //enable UIE, interrupt enable -> interrupt from ccr1 val
-    NVIC_EnableIRQ(TIM9_IRQn);
+    // TIM9->DIER |= (1 << 1);		        //enable UIE, interrupt enable -> falling edge
+	// // // TIM2->DIER |= 1;		            //enable UIE, interrupt enable -> interrupt from ccr1 val
+    // NVIC_EnableIRQ(TIM9_IRQn);
 
 }
 

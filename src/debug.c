@@ -53,3 +53,21 @@ void debug_APB1_TIM4_freeze(void) {
 	// Debug MCU APB1 freeze register
 	DBGMCU->APB1FZ |= (2 << 1);
 }
+
+/**
+ * @brief Unfreeze TIM4 while debugging, timer will run while pause
+ * 
+ * 
+ */
+void debug_APB2_TIM9_unfreeze(void) {
+	DBGMCU->APB2FZ &= ~(2 << 1);
+}
+/**
+ * @brief TIM4 will freeze durign debugging pause
+ * 
+ * 
+ */
+void debug_APB2_TIM9_freeze(void) {
+	// Debug MCU APB1 freeze register
+	DBGMCU->APB2FZ |= (2 << 1);
+}
